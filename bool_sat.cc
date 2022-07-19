@@ -353,16 +353,11 @@ Node* Bool_SAT::combine_outputs_to_expr(vector<Node*> outputs,
     return result;
 }
 
+// Recursive function that checks for satisfiability of the given formula
 bool Bool_SAT::bool_sat(Expression* expr) {
-    // cout << expr->vars.size() << endl;
-    // if (count_nodes(expr->head) == 100)
-    //     print_tree_as_bool_expr(expr->head);
-    cout << count_nodes(expr->head) << endl;
-
-    // cout << "Clearing maps" << endl;
     clear_maps();
 
-    // cout << "Checking for end" << endl;
+    // Base case: if the formula is a constant
     if (expr->vars.size() == 0) {
         while (expr->head->type != LEAF) {
             clear_maps();
@@ -372,20 +367,19 @@ bool Bool_SAT::bool_sat(Expression* expr) {
         return expr->head->value;
     }
 
-    // cout << "Getting next variable" << endl;
+    // Get the highest variable in the tree
     int var_id_to_sub = find_highest_var(expr->head, expr->vars);
-    // int var_id_to_sub = expr->vars[0]->value;
     expr->vars.erase(expr->vars.begin());
 
-    // cout << "Calculating affected" << endl;
+    // Store tree nodes affected by the variable
     affected_by_var(expr->head, var_id_to_sub);
 
-    // cout << "Copying head" << endl;
+    // Create two copies of the tree: One with the variable set to 0, and 1 
     Node* copy = deep_copy_node(expr->head);
-    // cout << "Substituting variables" << endl;
     expr->head = substitute_constant(expr->head, var_id_to_sub, &zero_node);
     copy = substitute_constant(copy, var_id_to_sub, &one_node);
 
+    // OR the two copies together
     Node* new_node = new Node;
     new_node->type = BRANCH;
     new_node->op = OR;
@@ -393,7 +387,8 @@ bool Bool_SAT::bool_sat(Expression* expr) {
     new_node->right = copy;
 
     affected_by_var(new_node, var_id_to_sub);
-    // cout << "Simplifying" << endl;
+
+    //Simplify constants
     do {
         any_const_simps = false;
         simplify_constants(new_node);
@@ -419,27 +414,27 @@ string Bool_SAT::find_expr_inverse(Expression* expr) {
         return "";
     }
 
-    // while (vars.size() > 0) {
-    //     cout << vars.size() << " variables left" << endl;
+    while (vars.size() > 0) {
+        cout << vars.size() << " variables left" << endl;
 
-    //     int var_id_to_check = vars[0]->value;
-    //     vars.erase(vars.begin());
-    //     clear_maps();
+        int var_id_to_check = vars[0]->value;
+        vars.erase(vars.begin());
+        clear_maps();
 
-    //     expr->head = substitute_constant(full_deep_copy_node(head),
-    //                                      var_id_to_check, &zero_node);
-    //     expr->vars = vars;
+        expr->head = substitute_constant(full_deep_copy_node(head),
+                                         var_id_to_check, &zero_node);
+        expr->vars = vars;
 
-    //     if (bool_sat(expr)) {
-    //         input2 += '0';
-    //         clear_maps();
-    //         head = substitute_constant(head, var_id_to_check, &zero_node);
-    //     } else {
-    //         input2 += '1';
-    //         clear_maps();
-    //         head = substitute_constant(head, var_id_to_check, &one_node);
-    //     }
-    // }
+        if (bool_sat(expr)) {
+            input2 += '0';
+            clear_maps();
+            head = substitute_constant(head, var_id_to_check, &zero_node);
+        } else {
+            input2 += '1';
+            clear_maps();
+            head = substitute_constant(head, var_id_to_check, &one_node);
+        }
+    }
 
     return input2;
 }
